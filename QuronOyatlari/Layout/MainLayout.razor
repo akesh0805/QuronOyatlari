@@ -1,0 +1,179 @@
+﻿@using QuronOyatlari.Services
+@using System.Text.Json
+@inherits LayoutComponentBase
+@inject SurahsService SurahsService
+@inject IJSRuntime JSRuntime
+
+<style>
+    @@media (max-width: 600px) {
+        .mobile-select {
+            max-width: 120px !important;
+            margin: 2px !important;
+            max-height: 50px !important;
+            border-radius: 25px !important;
+        }
+    }
+</style>
+<MudThemeProvider IsDarkMode="true" />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="3" Class="mb-4">
+        <MudSelect Class="mobile-select"  Style="max-width: 150px;" T="string" Label="Sura" Variant="Variant.Filled" AdornmentIcon="@Icons.Material.Filled.Search"
+            AdornmentColor="Color.Primary" @bind-Value="selectedSurah"
+            SelectedValuesChanged="@(values => OnSelectedSurahChanged(new HashSet<string>(values)))">
+            @if (allSurahs is not null)
+            {
+                @foreach (var surah in allSurahs)
+                {
+                    <MudSelectItem Value="@surah.EnglishName">@surah.EnglishName</MudSelectItem>
+                }
+            }
+        </MudSelect>
+        <MudSelect Class="mobile-select" Style="max-width: 100px;" T="string" Label="Oyat" Variant="Variant.Filled" AdornmentIcon="@Icons.Material.Filled.Search"
+            AdornmentColor="Color.Primary" @bind-Value="selectedAyah"
+            SelectedValuesChanged="@(values => OnAyahSelected(values.FirstOrDefault()))">
+
+            @if (selectedSurahAyahs > 0)
+            {
+                @foreach (var ayah in Enumerable.Range(1, selectedSurahAyahs))
+                {
+                    <MudSelectItem Value="@ayah.ToString()">@ayah</MudSelectItem>
+                }
+            }
+        </MudSelect>
+        <MudSpacer />
+        <MudIconButton @onclick="OnTranslateIconClicked">
+            <MudIcon Icon="@Icons.Material.Filled.Translate" />
+        </MudIconButton>
+    </MudAppBar>
+    <MudMainContent>
+        <MudContainer Class="mt-20">
+            <MudSpacer />
+            <MudCard Class="mt-4">
+                <img src="@pngUrl" alt="Surah Ayah Image" style="max-width:100%;" />
+            </MudCard>
+            @if (isTranslationShow)
+            {
+                <MudPaper Class="mt-4">
+                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Success">@surahTranlation?.Text</MudText>
+                </MudPaper>
+            }
+            <audio @ref="audioPlayer" src="@mp3Url" preload="auto" />
+            @Body
+        </MudContainer>
+    </MudMainContent>
+    <MudAppBar Bottom="true" Fixed="true" Color="Color.Warning" Elevation="1">
+        @if (isPlay)
+        {
+            <MudIconButton Size="Size.Large" Icon="@Icons.Material.Filled.Pause" Color="Color.Inherit" Edge="Edge.Start"
+                @onclick="OnPlayIconClicked" />
+        }
+        else
+        {
+            <MudIconButton Size="Size.Large" Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Inherit" Edge="Edge.Start"
+                @onclick="OnPlayIconClicked" />
+        }
+        <MudSpacer />
+        <MudIconButton @onclick="OnStateIconClicked" Color="Color.Inherit">
+            <MudIcon Size="Size.Large"  Icon="@(stateIcon switch  
+                {  
+                    StateIcon.Repeat => Icons.Material.Filled.RepeatOne,   
+                    StateIcon.Default => Icons.Material.Filled.Repeat,  
+                    StateIcon.AutoNext => Icons.Material.Filled.SkipNext,  
+                    _ => Icons.Material.Filled.Repeat  
+                })" />
+        </MudIconButton>
+    </MudAppBar>
+</MudLayout>
+@code
+{
+    private List<Surah>? allSurahs;
+    private SurahTranslationData? surahTranlation;
+    private string? selectedSurah;
+    private int selectedSurahAyahs;
+    private int selectedSurahNumber;
+    private string? selectedAyah;
+    private string? pngUrl;
+    private string? mp3Url;
+    private bool isTranslationShow = false;
+    private bool isPlay = false;
+    private ElementReference audioPlayer;
+    public enum StateIcon
+    {
+        Default,
+        Repeat,
+        AutoNext,
+    }
+    private StateIcon stateIcon = StateIcon.Default;
+    private void OnStateIconClicked()
+    {
+        StateHasChanged();
+        stateIcon = stateIcon switch
+        {
+            StateIcon.Default => StateIcon.Repeat,
+            StateIcon.Repeat => StateIcon.AutoNext,
+            StateIcon.AutoNext => StateIcon.Default,
+            _ => StateIcon.Default
+        };
+        StateHasChanged();
+    }
+    private async void OnPlayIconClicked()
+    {
+        StateHasChanged();
+        isPlay = !isPlay;
+        StateHasChanged();
+        if (isPlay)
+        {
+            await JSRuntime.InvokeVoidAsync("audioPlayer.play", audioPlayer);
+            StateHasChanged();
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("audioPlayer.pause", audioPlayer);
+            StateHasChanged();
+        }
+        StateHasChanged();
+    }
+
+    private void OnTranslateIconClicked()
+    {
+        StateHasChanged();
+        isTranslationShow = !isTranslationShow;
+        StateHasChanged();
+    }
+
+    private void OnSelectedSurahChanged(HashSet<string> selectedValues)
+    {
+        StateHasChanged();
+        selectedSurah = selectedValues.FirstOrDefault();
+        StateHasChanged();
+        var surah = allSurahs?.FirstOrDefault(s => s.EnglishName == selectedSurah);
+        StateHasChanged();
+        selectedSurahAyahs = surah?.NumberOfAyahs ?? 0;
+        StateHasChanged();
+        selectedSurahNumber = surah?.Number ?? 0;
+        StateHasChanged();
+
+    }
+    private async Task OnAyahSelected(string ayah)
+    {
+        selectedAyah = ayah;
+        if (selectedSurahNumber > 0 && int.TryParse(selectedAyah, out var ayahNumber))
+        {
+            StateHasChanged();
+            pngUrl = await SurahsService.GetSurahPng(selectedSurahNumber, ayahNumber);
+            StateHasChanged();
+            surahTranlation = await SurahsService.GetSurahTranlationAsync(selectedSurahNumber, ayahNumber);
+            StateHasChanged();
+            mp3Url = await SurahsService.GetSurahAudio(selectedSurahNumber);
+            StateHasChanged();
+        }
+        StateHasChanged();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        allSurahs = await SurahsService.GetAllSurahs();
+        StateHasChanged();
+    }
+}
