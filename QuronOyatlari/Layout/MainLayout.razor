@@ -17,75 +17,71 @@
 <MudThemeProvider IsDarkMode="true" />
 <MudPopoverProvider />
 
-<MudLayout>
-    <MudAppBar Elevation="3" Class="mb-4">
-        <MudSelect Class="mobile-select"  Style="max-width: 150px;" T="string" Label="Sura" Variant="Variant.Filled" AdornmentIcon="@Icons.Material.Filled.Search"
-            AdornmentColor="Color.Primary" @bind-Value="selectedSurah"
-            SelectedValuesChanged="@(values => OnSelectedSurahChanged(new HashSet<string>(values)))">
-            @if (allSurahs is not null)
+<MudAppBar Elevation="3" Class="mb-4">
+    <MudSelect Class="mobile-select" Style="max-width: 150px;" T="string" Label="Sura" Variant="Variant.Filled"
+        AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" @bind-Value="selectedSurah"
+        SelectedValuesChanged="@(values => OnSelectedSurahChanged(new HashSet<string>(values)))">
+        @if (allSurahs is not null)
+        {
+            @foreach (var surah in allSurahs)
             {
-                @foreach (var surah in allSurahs)
-                {
-                    <MudSelectItem Value="@surah.EnglishName">@surah.EnglishName</MudSelectItem>
-                }
+                <MudSelectItem Value="@surah.EnglishName">@surah.EnglishName</MudSelectItem>
             }
-        </MudSelect>
-        <MudSelect Class="mobile-select" Style="max-width: 100px;" T="string" Label="Oyat" Variant="Variant.Filled" AdornmentIcon="@Icons.Material.Filled.Search"
-            AdornmentColor="Color.Primary" @bind-Value="selectedAyah"
-            SelectedValuesChanged="@(values => OnAyahSelected(values.FirstOrDefault()))">
+        }
+    </MudSelect>
+    <MudSelect Class="mobile-select" Style="max-width: 100px;" T="string" Label="Oyat" Variant="Variant.Filled"
+        AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary" @bind-Value="selectedAyah"
+        SelectedValuesChanged="@(values => OnAyahSelected(values.FirstOrDefault()))">
 
-            @if (selectedSurahAyahs > 0)
-            {
-                @foreach (var ayah in Enumerable.Range(1, selectedSurahAyahs))
-                {
-                    <MudSelectItem Value="@ayah.ToString()">@ayah</MudSelectItem>
-                }
-            }
-        </MudSelect>
-        <MudSpacer />
-        <MudIconButton @onclick="OnTranslateIconClicked">
-            <MudIcon Icon="@Icons.Material.Filled.Translate" />
-        </MudIconButton>
-    </MudAppBar>
-    <MudMainContent>
-        <MudContainer Class="mt-20">
-            <MudSpacer />
-            <MudCard Class="mt-4">
-                <img src="@pngUrl" alt="Surah Ayah Image" style="max-width:100%;" />
-            </MudCard>
-            @if (isTranslationShow)
-            {
-                <MudPaper Class="mt-4">
-                    <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Success">@surahTranlation?.Text</MudText>
-                </MudPaper>
-            }
-            <audio @ref="audioPlayer" src="@mp3Url" preload="auto" />
-            @Body
-        </MudContainer>
-    </MudMainContent>
-    <MudAppBar Bottom="true" Fixed="true" Color="Color.Warning" Elevation="1">
-        @if (isPlay)
+        @if (selectedSurahAyahs > 0)
         {
-            <MudIconButton Size="Size.Large" Icon="@Icons.Material.Filled.Pause" Color="Color.Inherit" Edge="Edge.Start"
-                @onclick="OnPlayIconClicked" />
+            @foreach (var ayah in Enumerable.Range(1, selectedSurahAyahs))
+            {
+                <MudSelectItem Value="@ayah.ToString()">@ayah</MudSelectItem>
+            }
         }
-        else
-        {
-            <MudIconButton Size="Size.Large" Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Inherit" Edge="Edge.Start"
-                @onclick="OnPlayIconClicked" />
-        }
-        <MudSpacer />
-        <MudIconButton @onclick="OnStateIconClicked" Color="Color.Inherit">
-            <MudIcon Size="Size.Large"  Icon="@(stateIcon switch  
+    </MudSelect>
+    <MudSpacer />
+    <MudIconButton @onclick="OnTranslateIconClicked">
+        <MudIcon Icon="@Icons.Material.Filled.Translate" />
+    </MudIconButton>
+</MudAppBar>
+<MudContainer Class="mt-20">
+    <MudSpacer />
+    <MudCard Class="mt-4">
+        <img src="@pngUrl" alt="Surah Ayah Image" style="max-width:100%;" />
+    </MudCard>
+    @if (isTranslationShow)
+    {
+        <MudPaper Class="mt-4">
+            <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Success">@surahTranlation?.Text</MudText>
+        </MudPaper>
+    }
+    <audio @ref="audioPlayer" src="@mp3Url" preload="auto" />
+    @Body
+</MudContainer>
+<MudAppBar Bottom="true" Fixed="true" Color="Color.Warning" Elevation="1">
+    @if (isPlay)
+    {
+        <MudIconButton Size="Size.Large" Icon="@Icons.Material.Filled.Pause" Color="Color.Inherit" Edge="Edge.Start"
+            @onclick="OnPlayIconClicked" />
+    }
+    else
+    {
+        <MudIconButton Size="Size.Large" Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Inherit" Edge="Edge.Start"
+            @onclick="OnPlayIconClicked" />
+    }
+    <MudSpacer />
+    <MudIconButton @onclick="OnStateIconClicked" Color="Color.Inherit">
+        <MudIcon Size="Size.Large" Icon="@(stateIcon switch  
                 {  
                     StateIcon.Repeat => Icons.Material.Filled.RepeatOne,   
                     StateIcon.Default => Icons.Material.Filled.Repeat,  
                     StateIcon.AutoNext => Icons.Material.Filled.SkipNext,  
                     _ => Icons.Material.Filled.Repeat  
                 })" />
-        </MudIconButton>
-    </MudAppBar>
-</MudLayout>
+    </MudIconButton>
+</MudAppBar>
 @code
 {
     private List<Surah>? allSurahs;
