@@ -43,8 +43,8 @@
     </MudSelect>
     <MudSpacer />
     <MudIconButton @onclick="OnTranslateIconClicked">
-        <MudIcon Icon="@Icons.Material.Filled.Translate" />
-    </MudIconButton>
+    <MudIcon Icon="@Icons.Material.Filled.Translate" Color="@iconColor" />
+</MudIconButton>
 </MudAppBar>
 <MudContainer Class="mt-20">
     <MudSpacer />
@@ -102,9 +102,9 @@
         AutoNext,
     }
     private StateIcon stateIcon = StateIcon.Default;
+    private Color iconColor = Color.Primary;
     private void OnStateIconClicked()
     {
-        StateHasChanged();
         stateIcon = stateIcon switch
         {
             StateIcon.Default => StateIcon.Repeat,
@@ -114,9 +114,43 @@
         };
         StateHasChanged();
     }
+    [JSInvokable]
+    private async Task OnAudioEnded()
+    {
+        switch (stateIcon)
+        {
+            case StateIcon.Default:
+                isPlay = false;
+                await JSRuntime.InvokeVoidAsync("audioPlayer.pause", audioPlayer);
+                break;
+
+            case StateIcon.Repeat:
+                await JSRuntime.InvokeVoidAsync("audioPlayer.setCurrentTime", audioPlayer, 0);
+                await JSRuntime.InvokeVoidAsync("audioPlayer.play", audioPlayer);
+                break;
+
+            case StateIcon.AutoNext:
+                var nextSurahNumber = selectedSurahNumber + 1;
+                if (nextSurahNumber <= allSurahs?.Count)
+                {
+                    selectedSurahNumber = nextSurahNumber;
+                    var nextSurah = allSurahs.FirstOrDefault(s => s.Number == nextSurahNumber);
+                    selectedSurah = nextSurah?.EnglishName ?? string.Empty;
+                    mp3Url = await SurahsService.GetSurahAudio(selectedSurahNumber);
+                    await JSRuntime.InvokeVoidAsync("audioPlayer.play", audioPlayer);
+                }
+                else
+                {
+                    isPlay = false;
+                    await JSRuntime.InvokeVoidAsync("audioPlayer.pause", audioPlayer);
+                }
+                break;
+        }
+        StateHasChanged();
+    }
+
     private async void OnPlayIconClicked()
     {
-        StateHasChanged();
         isPlay = !isPlay;
         StateHasChanged();
         if (isPlay)
@@ -134,27 +168,33 @@
 
     private void OnTranslateIconClicked()
     {
-        StateHasChanged();
         isTranslationShow = !isTranslationShow;
+        iconColor = iconColor == Color.Primary ? Color.Success : Color.Primary;
         StateHasChanged();
     }
 
-    private void OnSelectedSurahChanged(HashSet<string> selectedValues)
+    private async void OnSelectedSurahChanged(HashSet<string> selectedValues)
     {
-        StateHasChanged();
         selectedSurah = selectedValues.FirstOrDefault();
-        StateHasChanged();
         var surah = allSurahs?.FirstOrDefault(s => s.EnglishName == selectedSurah);
-        StateHasChanged();
         selectedSurahAyahs = surah?.NumberOfAyahs ?? 0;
-        StateHasChanged();
         selectedSurahNumber = surah?.Number ?? 0;
+
+        isPlay = false;
+        await JSRuntime.InvokeVoidAsync("audioPlayer.pause", audioPlayer);
+
+        mp3Url = null;
         StateHasChanged();
 
+        mp3Url = await SurahsService.GetSurahAudio(selectedSurahNumber);
+        StateHasChanged();
     }
+
     private async Task OnAyahSelected(string ayah)
     {
+        StateHasChanged();
         selectedAyah = ayah;
+        StateHasChanged();
         if (selectedSurahNumber > 0 && int.TryParse(selectedAyah, out var ayahNumber))
         {
             StateHasChanged();
@@ -162,7 +202,7 @@
             StateHasChanged();
             surahTranlation = await SurahsService.GetSurahTranlationAsync(selectedSurahNumber, ayahNumber);
             StateHasChanged();
-            mp3Url = await SurahsService.GetSurahAudio(selectedSurahNumber);
+            await JSRuntime.InvokeVoidAsync("setupAudioEndedHandler", audioPlayer, DotNetObjectReference.Create(this));
             StateHasChanged();
         }
         StateHasChanged();
@@ -170,6 +210,8 @@
     protected override async Task OnInitializedAsync()
     {
         allSurahs = await SurahsService.GetAllSurahs();
+        StateHasChanged();
+        await JSRuntime.InvokeVoidAsync("audioPlayer.setupAudioEndedHandler", audioPlayer, DotNetObjectReference.Create(this));
         StateHasChanged();
     }
 }
