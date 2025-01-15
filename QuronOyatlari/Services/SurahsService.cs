@@ -46,4 +46,20 @@ public class SurahsService(HttpClient httpClient)
         }
         return string.Empty;
     }
+    public async Task<string>? GetAyahAudio(int surahNumber, int ayahNumber)
+    {
+        var ayah = await httpClient.GetFromJsonAsync<AyahAudioResponse>($"https://api.alquran.cloud/v1/ayah/{surahNumber}:{ayahNumber}/ar.alafasy");
+        var mp3Url = ayah?.Data?.Audio ?? string.Empty;
+        if (mp3Url is not null)
+        {
+            var response = await httpClient.GetAsync(mp3Url);
+            if (response.IsSuccessStatusCode)
+            {
+                return mp3Url;
+            }
+        }
+
+        return string.Empty;
+    }
+
 }
